@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/background_gradient">
+
+    <!-- Login Form -->
+
+
+    <!-- Register Form -->
+
+    <LinearLayout
+        android:id="@+id/loginForm"
+        android:layout_width="match_parent"
+        android:layout_height="566dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+        <TextView
+            android:layout_width="176dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="8dp"
+            android:text="Iniciar Sesión"
+            android:textSize="24sp" />
+
+        <EditText
+            android:id="@+id/username"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Usuario" />
+
+        <EditText
+            android:id="@+id/password"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Contraseña"
+            android:inputType="textPassword" />
+
+        <Button
+            android:id="@+id/loginButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ingresar" />
+
+        <TextView
+            android:id="@+id/toggleToRegister"
+            android:layout_width="306dp"
+            android:layout_height="63dp"
+            android:layout_marginTop="8dp"
+            android:text="¿No tienes cuenta? Regístrate"
+            android:textColor="@color/holo_blue_light" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/registerForm"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:text="Registro"
+            android:textSize="24sp"
+            android:layout_gravity="center"
+            android:layout_marginTop="8dp"
+            android:layout_height="10dp"
+            android:layout_width="10dp"/>
+
+        <EditText
+            android:id="@+id/newUsername"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Usuario"/>
+
+        <EditText
+            android:id="@+id/newPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Contraseña"
+            android:inputType="textPassword"/>
+
+        <EditText
+            android:id="@+id/confirmPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Confirmar Contraseña"
+            android:inputType="textPassword"/>
+
+        <Button
+            android:id="@+id/registerButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Registrarse"/>
+
+        <TextView
+            android:id="@+id/toggleToLogin"
+            android:text="¿Ya tienes cuenta? Inicia Sesión"
+            android:textColor="@color/holo_blue_light"
+            android:layout_marginTop="8dp"
+            android:layout_height="10dp"
+            android:layout_width="10dp"/>
+    </LinearLayout>
+
+    <!-- Create Post Form -->
+    <LinearLayout
+        android:id="@+id/createPostForm"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        >
+
+        <TextView
+            android:layout_width="325dp"
+            android:layout_height="56dp"
+            android:layout_gravity="center"
+            android:text="Crear Nueva Publicación"
+            android:textSize="24sp"
+            tools:layout_editor_absoluteX="53dp" />
+
+        <EditText
+            android:id="@+id/jobTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Trabajo"
+            tools:layout_editor_absoluteX="-16dp"
+            tools:layout_editor_absoluteY="75dp" />
+
+        <EditText
+            android:id="@+id/salary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Sueldo"
+            android:inputType="number"
+            tools:layout_editor_absoluteX="-16dp"
+            tools:layout_editor_absoluteY="120dp" />
+
+        <EditText
+            android:id="@+id/location"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Localización"
+            tools:layout_editor_absoluteX="0dp"
+            tools:layout_editor_absoluteY="172dp" />
+
+        <Button
+            android:id="@+id/postButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Postear"
+            tools:layout_editor_absoluteX="0dp"
+            tools:layout_editor_absoluteY="228dp" />
+
+        <Button
+            android:id="@+id/menuButton"
+            tools:layout_editor_absoluteX="0dp"
+            tools:layout_editor_absoluteY="228dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Trabajos Posteados" />
+
+        <Button
+            android:id="@+id/backButtonCreatePost"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Atrás"
+            tools:layout_editor_absoluteX="-16dp"
+            tools:layout_editor_absoluteY="290dp" />
+    </LinearLayout>
+
+    <!-- Sección para mostrar calificaciones -->
+
+    <!-- Posts List -->
+    <LinearLayout
+        android:id="@+id/postsMenu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="170dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="8dp"
+            android:text="Publicaciones"
+            android:textSize="24sp" />
+
+        <EditText
+            android:id="@+id/searchInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Buscar publicaciones..."/>
+
+        <LinearLayout
+            android:id="@+id/postsList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"/>
+
+        <Button
+            android:id="@+id/backButtonPosts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Atrás"/>
+    </LinearLayout>
+
+
+
+
+    <!-- ... otros elementos ... -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/postsRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+
+
+</LinearLayout>
+
