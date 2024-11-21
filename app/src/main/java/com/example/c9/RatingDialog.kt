@@ -7,9 +7,9 @@ import android.widget.RatingBar
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
-import com.example.c9.rating.RatingAverageCalculator
-import java.sql.Connection
+
 import java.sql.SQLException
+import android.widget.TextView
 
 // Interfaz para la comunicación entre RatingDialog y MainActivity
 interface RatingDialogListener {
@@ -19,7 +19,7 @@ interface RatingDialogListener {
 class RatingDialog : DialogFragment() {
 
     private var postId: Int = -1
-    private var rating: Float = 0f
+
     private var listener: RatingDialogListener? = null
 
 
@@ -51,21 +51,38 @@ class RatingDialog : DialogFragment() {
         val ratingBar: RatingBar = view.findViewById(R.id.ratingBar)
         val buttonSubmit: Button = view.findViewById(R.id.buttonSubmit)
 
+        // Obtén el postId de los argumentos del DialogFragment
+        val postId = arguments?.getInt("postId") ?: -1
+
         buttonSubmit.setOnClickListener {
-            rating = ratingBar.rating
+            val rating = ratingBar.rating
+
             if (postId == -1) {
                 Toast.makeText(context, "Error: PostId no definido", Toast.LENGTH_SHORT).show()
                 dismiss()
                 return@setOnClickListener
             }
-            saveRatingToDatabase(rating)
+
+            // Encuentra el CardView correspondiente al postId
+            val cardView = (activity as MainActivity).findCardViewByPostId(postId)
+            // Encuentra el TextView dentro del CardView (si existe)
+            val postTextView = cardView?.findViewById<TextView>(R.id.postTextView)
+
+            // Verifica si postTextView es nulo antes de usarlo
+            if (postTextView != null) {
+                (activity as MainActivity).saveRatingToDatabase(rating, postId, postTextView)
+            } else {
+                // Manejar el caso nulo, por ejemplo, mostrar un mensaje de error
+                Toast.makeText(context, "Error: No se pudo encontrar el TextView", Toast.LENGTH_SHORT).show()
+            }
+
             dismiss()
         }
 
-        builder.setView(view)
-            .setTitle("Calificación")
-
-        return builder.create()
+        return builder.setView(view)
+            .setTitle("Calificar Publicación")
+            .setNegativeButton("Cancelar") { dialog, _ -> dialog.cancel() }
+            .create()
     }
 
     private fun saveRatingToDatabase(rating: Float) {
@@ -78,7 +95,7 @@ class RatingDialog : DialogFragment() {
                 preparedStatement.setFloat(2, rating)
                 preparedStatement.executeUpdate()
                 Toast.makeText(context, "Calificación guardada", Toast.LENGTH_SHORT).show()
-                updateAverageRating(postId, connection)
+
                 listener?.onRatingSubmitted() //Notifica a MainActivity que se ha guardado
             } else {
                 Toast.makeText(context, "Error al conectar con la base de datos", Toast.LENGTH_SHORT).show()
@@ -94,12 +111,5 @@ class RatingDialog : DialogFragment() {
         }
     }
 
-    private fun updateAverageRating(postId: Int, connection: Connection) {
-        try {
-            RatingAverageCalculator.calculateAverageRating(postId, connection)
-        } catch (e: Exception) {
-            Toast.makeText(context, "Error al actualizar calificación promedio: ${e.message}", Toast.LENGTH_SHORT).show()
-            e.printStackTrace()
-        }
-    }
+
 }

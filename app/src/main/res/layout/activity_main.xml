@@ -176,11 +176,13 @@
 
     <!-- Posts List -->
     <LinearLayout
+
         android:id="@+id/postsMenu"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:visibility="gone">
+
 
         <TextView
             android:layout_width="170dp"
@@ -195,19 +197,25 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Buscar publicaciones..."/>
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
 
         <LinearLayout
             android:id="@+id/postsList"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"/>
-
+        </ScrollView>
         <Button
             android:id="@+id/backButtonPosts"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Atrás"/>
+
     </LinearLayout>
+
 
 
 

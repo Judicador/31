@@ -14,7 +14,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
-import com.example.c9.rating.RatingAverageCalculator
+
+
+import java.sql.ResultSet
+
+
 import java.sql.Connection
 import java.sql.SQLException
 
@@ -29,6 +33,7 @@ class MainActivity : AppCompatActivity() {
     private val users = mutableListOf<User>()
     private val posts = mutableListOf<Post>()
     private lateinit var currentUser: String
+    private val cardViewsByPostId = HashMap<Int, CardView>()
 
 
 
@@ -53,6 +58,9 @@ class MainActivity : AppCompatActivity() {
         val backButtonCreatePost: Button = findViewById(R.id.backButtonCreatePost)
         val backButtonPosts: Button = findViewById(R.id.backButtonPosts)
         val searchInput: EditText = findViewById(R.id.searchInput)
+
+
+
 
         // Inicialización del TextWatcher para búsqueda
         searchInput.addTextChangedListener(object : TextWatcher {
@@ -104,9 +112,119 @@ class MainActivity : AppCompatActivity() {
             displayPosts()
         }
 
+
+
     }
 
 
+
+        // ... (resto del código de tu clase MainActivity) ...
+
+        private fun getUserIdByUsername(connection: Connection, username: String): Int {
+            var userId = -1 // Valor por defecto si no se encuentra el usuario
+
+            try {
+                if (!connection.isClosed) {
+                    val query = "SELECT UserId FROM Users WHERE Username = ?"
+                    val preparedStatement = connection.prepareStatement(query)
+                    preparedStatement.setString(1, username)
+                    val resultSet = preparedStatement.executeQuery()
+
+                    if (resultSet.next()) {
+                        userId = resultSet.getInt("UserId")
+                    }
+
+                    resultSet.close()
+                    preparedStatement.close()
+                } else {
+                    // Manejar error de conexión (puedes usar tu función handleDbError)
+                    println("Error al conectar con la base de datos")
+                }
+            } catch (e: SQLException) {
+                // Manejar error de SQL (puedes usar tu función handleDbError)
+                println("Error al obtener el ID del usuario: ${e.message}")
+            } catch (e: Exception) {
+                // Manejar error inesperado (puedes usar tu función handleDbError)
+                println("Error inesperado: ${e.message}")
+            }
+
+            return userId
+        }
+
+
+    fun saveRatingToDatabase(rating: Float, postId: Int, postTextView: TextView) {
+        // 1. Update the database with the new rating
+
+        ConnectSql().dbConn()?.let { connection -> // Usa let para ejecutar el código solo si la conexión no es nula
+            val userId = UserUtils.getUserIdByUsername(connection, currentUser)
+
+            if (userId != -1) {
+                // Inserta la calificación en PostRatings
+                try {
+                    if (connection != null && !connection.isClosed) {
+                        val query = "INSERT INTO PostRatings (postId, UserID, rating) VALUES (?, ?, ?)"
+                        val preparedStatement = connection.prepareStatement(query)
+                        preparedStatement.setInt(1, postId)
+                        preparedStatement.setInt(2, userId) // Usa el ID del usuario aquí
+                        preparedStatement.setFloat(3, rating)
+                        preparedStatement.executeUpdate()
+
+                        // Update the average rating in the UI
+                        updateAverageRating(postId, connection)
+                    } else {
+                        handleDbError("Error al conectar con la base de datos")
+                    }
+                } catch (e: SQLException) {
+                    handleDbError("Error al guardar la calificación: ${e.message}", e)
+                } catch (e: Exception) {
+                    handleDbError("Error inesperado: ${e.message}", e)
+                } finally {
+                    // La conexión se cierra aquí, después de updateAverageRating()
+                    connection.close()
+                }
+            } else {
+                // Manejar error si no se encuentra el usuario
+                handleDbError("No se pudo encontrar el usuario para guardar la calificación")
+                // La conexión se cierra aquí también, si no se encuentra el usuario
+                connection.close()
+            }
+        } ?: run {
+            handleDbError("Error al conectar con la base de datos") // Ejecuta esto si la conexión es nula
+        }
+    }
+
+    private fun updateAverageRating(postId: Int, connection: Connection) {
+        try {
+            val query = """
+            SELECT AVG(rating) AS average_rating
+            FROM PostRatings
+            WHERE postId = ?
+        """
+            val preparedStatement = connection.prepareStatement(query)
+            preparedStatement.setInt(1, postId)
+            val resultSet = preparedStatement.executeQuery()
+
+            if (resultSet.next()) {
+                val averageRating = resultSet.getDouble("average_rating")
+                // Update the UI with the new average rating
+                val cardView = findCardViewByPostId(postId)
+                val postTextView = cardView?.findViewById<TextView>(R.id.postTextView)
+                postTextView?.text = postTextView?.text.toString().replace(
+                    Regex("""\(Calificación: [0-9.]+\)"""),
+                    "(Calificación: ${averageRating.format(1)})"
+                )
+            }
+
+            resultSet.close()
+            preparedStatement.close()
+        } catch (e: Exception) {
+            handleDbError("Error al actualizar calificación promedio: ${e.message}", e)
+        }
+    }
+
+    internal fun findCardViewByPostId(postId: Int): CardView? {
+        return cardViewsByPostId[postId]
+    }
 
     private fun login() {
         val username = findViewById<EditText>(R.id.username).text.toString()
@@ -237,28 +355,27 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Conectar a la base de datos
         val connection = ConnectSql().dbConn()
 
         try {
-            // Verifica si la conexión es válida y está abierta
             if (connection != null && !connection.isClosed) {
-                // Preparar la consulta para insertar la nueva publicación
-                val query = "INSERT INTO Posts (JobTitle, Salary, Location, Author) VALUES (?, ?, ?, ?)"
+                val userId = UserUtils.getUserIdByUsername(connection, currentUser)
+
+                val query = "INSERT INTO Posts (JobTitle, Salary, Location, UserId) VALUES (?, ?, ?, ?)"
                 val preparedStatement = connection.prepareStatement(query)
                 preparedStatement.setString(1, jobTitle)
                 preparedStatement.setString(2, salary)
                 preparedStatement.setString(3, location)
-                preparedStatement.setString(4, currentUser)
+                preparedStatement.setInt(4, userId)
 
-                // Ejecutar la consulta
                 preparedStatement.executeUpdate()
                 Toast.makeText(this, "Publicación creada", Toast.LENGTH_SHORT).show()
                 clearPostForm()
 
-                // Agregar la publicación a la lista local para visualización
                 posts.add(Post(jobTitle, salary, location, currentUser))
-                displayPosts() // Mostrar las publicaciones actualizadas
+                displayPosts()
+
+
             } else {
                 Log.e("DB Connection", "La conexión es nula o está cerrada.")
                 Toast.makeText(this, "Error al conectar con la base de datos", Toast.LENGTH_SHORT).show()
@@ -270,13 +387,12 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
             Toast.makeText(this, "Error inesperado: ${e.message}", Toast.LENGTH_SHORT).show()
         } finally {
-            // Asegúrate de cerrar la conexión
-            connection?.close()
+            // El bloque finally ya no es necesario para cerrar la conexión
         }
-
-        // Ir al menú de publicaciones después de crear una publicación
+        connection?.close()
         findViewById<LinearLayout>(R.id.createPostForm).visibility = View.GONE
         findViewById<LinearLayout>(R.id.postsMenu).visibility = View.VISIBLE
+
     }
 
     private fun clearPostForm() {
@@ -291,14 +407,7 @@ class MainActivity : AppCompatActivity() {
         // Agrega más acciones de manejo de errores según sea necesario
     }
 
-    private fun updateAverageRating(postId: Int, connection: Connection) {
-        try {
-            val avgRating = RatingAverageCalculator.calculateAverageRating(postId, connection)
-            // ... Resto del código para actualizar la base de datos ...
-        } catch (e: Exception) {
-            handleDbError("Error al actualizar calificación promedio: ${e.message}", e)
-        }
-    }
+
 
 
     @SuppressLint("SetTextI18n")
@@ -309,7 +418,20 @@ class MainActivity : AppCompatActivity() {
         val connection = ConnectSql().dbConn()
         try {
             if (connection != null && !connection.isClosed) {
-                val querySQL = "SELECT * FROM Posts WHERE LOWER(JobTitle) LIKE ? OR LOWER(Location) LIKE ?"
+                val querySQL = """
+                SELECT 
+                    p.postId,
+                    p.JobTitle,
+                    p.Salary,
+                    p.Location,
+                    u.Username AS Author  -- Obtiene el nombre de usuario de la tabla Users
+                FROM 
+                    Posts p
+                INNER JOIN  -- Usa INNER JOIN para obtener el nombre de usuario
+                    Users u ON p.UserId = u.UserId
+                WHERE 
+                    LOWER(p.JobTitle) LIKE ? OR LOWER(p.Location) LIKE ?
+            """
                 val preparedStatement = connection.prepareStatement(querySQL)
                 preparedStatement.setString(1, "%${query.lowercase()}%")
                 preparedStatement.setString(2, "%${query.lowercase()}%")
@@ -322,17 +444,41 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     do {
                         // Extrae los datos del ResultSet, igual que en displayPosts
+                        val postId = resultSet.getInt("postId") // Obtiene el postId del ResultSet
                         val jobTitle = resultSet.getString("JobTitle")
                         val salary = resultSet.getString("Salary")
                         val location = resultSet.getString("Location")
-                        val author = resultSet.getString("Author")
+                        val author = resultSet.getString("Author") // Obtiene el nombre de usuario del autor
+
+                        // Create CardView and add TextView to it
+                        val cardView = CardView(this)
+                        val layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        layoutParams.setMargins(16, 16, 16, 16)
+                        cardView.layoutParams = layoutParams
+                        cardView.setCardElevation(8f)
+                        cardView.setCardBackgroundColor(resources.getColor(android.R.color.white))
 
                         val postView = TextView(this)
                         postView.text = "Trabajo: $jobTitle\n" +
                                 "Sueldo: $salary\n" +
                                 "Ubicación: $location\n" +
                                 "Autor: $author"
-                        postsList.addView(postView)
+                        postView.setPadding(16, 16, 16, 16)
+
+                        // Agrega el postId al RatingDialog
+                        postView.setOnClickListener {
+                            val ratingDialog = RatingDialog()
+                            val bundle = Bundle()
+                            bundle.putInt("postId", postId)
+                            ratingDialog.arguments = bundle
+                            ratingDialog.show(supportFragmentManager, "RatingDialog")
+                        }
+
+                        cardView.addView(postView)
+                        postsList.addView(cardView) // Add CardView to postsList
                     } while (resultSet.next())
                 }
 
@@ -355,33 +501,36 @@ class MainActivity : AppCompatActivity() {
             errorMessage.text = "Error inesperado: ${e.message}"
             postsList.addView(errorMessage)
         } finally {
-            connection?.close()
+
         }
     }
 
     private fun displayPosts() {
         val postsList = findViewById<LinearLayout>(R.id.postsList)
         postsList.removeAllViews()
-
         val connection = ConnectSql().dbConn()
 
         try {
             if (connection != null && !connection.isClosed) {
                 val query = """
                 SELECT 
-                p.JobTitle,
-                p.Salary,
-                p.Location,
-                p.Author,
-                COALESCE(AVG(r.rating), 0) AS average_rating,
-                p.CreatedAt
-            FROM 
-                Posts p
-            LEFT JOIN 
-                PostRatings r ON p.postId = r.postId
-            GROUP BY 
-                p.JobTitle, p.Salary, p.Location, p.Author, p.CreatedAt  --Importante: Incluir CreatedAt en GROUP BY
-            ORDER BY p.CreatedAt DESC;
+                    p.postId,  -- Agrega esta línea para obtener el postId
+                    p.JobTitle,
+                    p.Salary,
+                    p.Location,
+                    u.Username AS Author,
+                    COALESCE(AVG(r.rating), 0) AS average_rating,
+                    p.CreatedAt
+                FROM 
+                    Posts p
+                LEFT JOIN 
+                    PostRatings r ON p.postId = r.postId
+               INNER JOIN  -- Usa INNER JOIN para obtener el nombre de usuario
+                    Users u ON p.UserId = u.UserId
+                GROUP BY 
+                    p.postId,  -- Agrega esta línea para agrupar por postId
+                    p.JobTitle, p.Salary, p.Location, u.Username, p.CreatedAt
+                ORDER BY p.CreatedAt DESC;
             """
                 val preparedStatement = connection.prepareStatement(query)
                 val resultSet = preparedStatement.executeQuery()
@@ -392,12 +541,13 @@ class MainActivity : AppCompatActivity() {
                     postsList.addView(noPostsMessage)
                 } else {
                     do {
-
+                        val postId = resultSet.getInt("postId")  // Obtén el postId del ResultSet
                         val jobTitle = resultSet.getString("JobTitle")
                         val salary = resultSet.getString("Salary")
                         val location = resultSet.getString("Location")
-                        val author = resultSet.getString("Author")
+                        val author = resultSet.getString("Author") // Obtiene el nombre de usuario del autor
                         val averageRating = resultSet.getDouble("average_rating")
+                        val userId = getUserIdByUsername(connection, author)
 
                         val cardView = CardView(this)
                         val layoutParams = LinearLayout.LayoutParams(
@@ -410,6 +560,7 @@ class MainActivity : AppCompatActivity() {
                         cardView.setCardBackgroundColor(resources.getColor(android.R.color.white))
 
                         val postView = TextView(this)
+                        postView.id = R.id.postTextView // Asigna un ID único al TextView
                         postView.text = """
                         Título: $jobTitle
                         Salario: $salary
@@ -420,15 +571,21 @@ class MainActivity : AppCompatActivity() {
 
                         // Listener combinado
                         postView.setOnClickListener {
-
-                            // Acción al hacer clic en la publicación (implementa tu lógica aquí)
                             val ratingDialog = RatingDialog()
+                            // Pasa el postId al RatingDialog
+                            val bundle = Bundle()
+                            bundle.putInt("postId", postId)
+                            ratingDialog.arguments = bundle
                             ratingDialog.show(supportFragmentManager, "RatingDialog")
                         }
 
                         cardView.addView(postView)
                         postsList.addView(cardView)
+
+                        // Agrega la entrada al HashMap cardViewsByPostId
+                        cardViewsByPostId[postId] = cardView
                     } while (resultSet.next())
+                    postsList.invalidate()
                 }
             }
         } catch (e: SQLException) {
